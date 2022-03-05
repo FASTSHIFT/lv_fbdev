@@ -9,6 +9,7 @@
  *********************/
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <time.h>
 
@@ -162,5 +163,8 @@ static void cursor_set_hidden(bool en)
 {
   // hide cursor echo -e "\033[?25l"
   // show cursor echo -e "\033[?25h"
-  system(en ? "echo -e \"\033[?25l\"" : "echo -e \"\033[?25h\"");
+  int ret = system(en ? "echo -e \"\033[?25l\"" : "echo -e \"\033[?25h\"");
+  printf(__func__);
+  printf(ret == 0 ? " OK" : " ERROR");
+  printf("\n");
 }
