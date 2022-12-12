@@ -66,10 +66,6 @@ static void cursor_set_hidden(bool en);
 
 int main(int argc, char** argv)
 {
-    if (argc < 2) {
-        printf("input evdev path is empty\n");
-    }
-
     /*Initialize LVGL*/
     lv_init();
 
@@ -79,8 +75,13 @@ int main(int argc, char** argv)
 
     const char* devpath = argv[1];
     if (devpath) {
+        LV_LOG_USER("evdev path: %s", devpath);
         lv_port_indev_init(devpath, true);
+    } else {
+        LV_LOG_WARN("evdev path is empty");
     }
+
+    lv_demo_benchmark(LV_DEMO_BENCHMARK_MODE_RENDER_AND_DRIVER);
 
     while (1) {
         /* Periodically call the lv_task handler.
@@ -96,7 +97,7 @@ int main(int argc, char** argv)
  *   STATIC FUNCTIONS
  **********************/
 
-uint32_t custom_tick_get(void)
+uint32_t millis(void)
 {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -109,12 +110,12 @@ static void lv_port_disp_init(void)
     /*Linux frame buffer device init*/
     fbdev_init();
 
-    uint32_t width, height;
-    fbdev_get_sizes(&width, &height);
+    uint32_t width, height, dpi;
+    fbdev_get_sizes(&width, &height, &dpi);
 
-    printf("fbdev: %" PRIu32 " x %" PRIu32 "\n", width, height);
+    LV_LOG_USER("fbdev: %" PRIu32 " x %" PRIu32 " DPI: %" PRIu32, width, height, dpi);
 
-    /*A small buffer for LittlevGL to draw the screen's content*/
+    /*A buffer for LittlevGL to draw the screen's content*/
     uint32_t buf_size = width * height;
     lv_color_t* buf = malloc(buf_size * sizeof(lv_color_t));
     LV_ASSERT_MALLOC(buf);
@@ -131,6 +132,9 @@ static void lv_port_disp_init(void)
     disp_drv.hor_res = width;
     disp_drv.ver_res = height;
     lv_disp_drv_register(&disp_drv);
+
+    lv_timer_set_period(_lv_disp_get_refr_timer(lv_disp_get_default()), 16);
+    lv_timer_set_period(lv_anim_get_timer(), 16);
 }
 
 static void lv_port_indev_init(const char* path, bool show_cursor)
@@ -139,8 +143,6 @@ static void lv_port_indev_init(const char* path, bool show_cursor)
     evdev_set_file(path);
 
     static lv_indev_drv_t indev_drv;
-
-    /*Register a encoder input device*/
     lv_indev_drv_init(&indev_drv);
     indev_drv.type = LV_INDEV_TYPE_POINTER;
     indev_drv.read_cb = evdev_read;
@@ -153,6 +155,8 @@ static void lv_port_indev_init(const char* path, bool show_cursor)
         lv_img_set_src(cursor_obj, &mouse_cursor_icon); /*Set the image source*/
         lv_indev_set_cursor(indev, cursor_obj); /*Connect the image  object to the driver*/
     }
+
+    lv_timer_set_period(lv_indev_get_read_timer(indev), 16);
 }
 
 static void cursor_set_hidden(bool en)
@@ -160,7 +164,5 @@ static void cursor_set_hidden(bool en)
     // hide cursor echo -e "\033[?25l"
     // show cursor echo -e "\033[?25h"
     int ret = system(en ? "echo -e \"\033[?25l\"" : "echo -e \"\033[?25h\"");
-    printf(__func__);
-    printf(ret == 0 ? " OK" : " ERROR");
-    printf("\n");
+    LV_LOG_USER(ret == 0 ? " OK" : " ERROR");
 }

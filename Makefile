@@ -13,11 +13,12 @@ WARNINGS ?= -Wall -Wextra \
 			-Wempty-body -Wshift-negative-value -Wstack-usage=4096 \
 			-Wtype-limits -Wsizeof-pointer-memaccess -Wpointer-arith
 
-#ASAN_FLAGS ?= -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
+# ASAN_FLAGS ?= -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer
+LV_DRV_FLAGS ?= -DUSE_FBDEV=1 -DUSE_EVDEV=1
 
 LIBS ?= -lm
 
-CFLAGS ?= -O3 -I$(LVGL_DIR)/ $(WARNINGS) $(ASAN_FLAGS)
+CFLAGS ?= -O3 -I$(LVGL_DIR)/ $(WARNINGS) $(ASAN_FLAGS) $(LV_DRV_FLAGS)
 LDFLAGS ?= $(LIBS) $(ASAN_FLAGS)
 BIN = demo
 
