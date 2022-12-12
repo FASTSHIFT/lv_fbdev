@@ -21,6 +21,8 @@
  *      DEFINES
  *********************/
 
+#define USE_DIRECT_MODE 0
+
 /**********************
  *      TYPEDEFS
  **********************/
@@ -105,6 +107,13 @@ uint32_t millis(void)
     return tick;
 }
 
+#if USE_DIRECT_MODE
+static void fbdev_flush_direct(lv_disp_drv_t* drv, const lv_area_t* area, lv_color_t* color_p)
+{
+    lv_disp_flush_ready(drv);
+}
+#endif
+
 static void lv_port_disp_init(void)
 {
     /*Linux frame buffer device init*/
@@ -117,8 +126,14 @@ static void lv_port_disp_init(void)
 
     /*A buffer for LittlevGL to draw the screen's content*/
     uint32_t buf_size = width * height;
+
+#if USE_DIRECT_MODE
+    lv_color_t* buf = fbdev_get_fbp();
+    LV_ASSERT_NULL(buf);
+#else
     lv_color_t* buf = malloc(buf_size * sizeof(lv_color_t));
     LV_ASSERT_MALLOC(buf);
+#endif
 
     /*Initialize a descriptor for the buffer*/
     static lv_disp_draw_buf_t disp_buf;
@@ -128,7 +143,12 @@ static void lv_port_disp_init(void)
     static lv_disp_drv_t disp_drv;
     lv_disp_drv_init(&disp_drv);
     disp_drv.draw_buf = &disp_buf;
+#if USE_DIRECT_MODE
+    disp_drv.flush_cb = fbdev_flush_direct;
+    disp_drv.direct_mode = 1;
+#else
     disp_drv.flush_cb = fbdev_flush;
+#endif
     disp_drv.hor_res = width;
     disp_drv.ver_res = height;
     lv_disp_drv_register(&disp_drv);
